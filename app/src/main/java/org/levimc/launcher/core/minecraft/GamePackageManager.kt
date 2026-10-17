@@ -113,10 +113,18 @@ class GamePackageManager private constructor(
     }
 
     private fun getDeviceAbi(): String {
-        return Build.SUPPORTED_64_BIT_ABIS.firstOrNull {
-            it.contains("arm64-v8a") || it.contains("x86_64")
-        } ?: Build.SUPPORTED_32_BIT_ABIS.firstOrNull {
-            it.contains("armeabi-v7a") || it.contains("x86")
+        // Native libraries loaded into this launcher must match the process bitness.
+        // This project builds the launcher for armeabi-v7a, so a 32-bit process
+        // must not select arm64-v8a just because the device supports 64-bit ABIs.
+        val processAbis = if (android.os.Process.is64Bit()) {
+            Build.SUPPORTED_64_BIT_ABIS
+        } else {
+            Build.SUPPORTED_32_BIT_ABIS
+        }
+
+        return processAbis.firstOrNull {
+            it == "arm64-v8a" || it == "x86_64" ||
+                it == "armeabi-v7a" || it == "x86"
         } ?: (Build.SUPPORTED_ABIS.firstOrNull() ?: "armeabi-v7a")
     }
 
